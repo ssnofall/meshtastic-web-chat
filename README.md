@@ -25,7 +25,7 @@ By connecting a Meshtastic node via USB to your offline/local server, you can in
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/axlixr/meshtastic-web-chat.git
+   git clone https://github.com/snofall/meshtastic-web-chat.git
    cd meshtastic-web-chat
    ```
 
@@ -60,7 +60,7 @@ By connecting a Meshtastic node via USB to your offline/local server, you can in
 
 GNU General Public License v3.0
 
-Created by **Axlixr.**
+Created by **snofall.**
 
 **Disclaimer:** This is an unofficial project and is not affiliated with or endorsed by the Meshtastic team.
 
