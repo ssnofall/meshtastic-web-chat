@@ -1,5 +1,12 @@
 # Meshtastic Web Chat
 
+**UPDATES**
+- added multiple meshtastic devices for failover. 
+- more robust error handling. 
+- moderate security improvements. 
+- script to help bootstrap a raspberry pi to serve the app 
+
+
 **Meshtastic Web Chat** is a lightweight, self-hosted web-based chat system that bridges local network users to the Meshtastic mesh network. It allows anyone connected to your local network to participate in mesh chats through a web browser even if they don't have a Meshtastic device.
 
 By connecting a Meshtastic node via USB to your offline/local server, you can instantly provide seamless browser-based access to the mesh.
