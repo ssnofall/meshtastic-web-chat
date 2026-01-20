@@ -1,5 +1,5 @@
 #!/bin/bash
-# Raspberry Pi Dual-Mode Network Setup Script
+# Raspberry Pi Dual-Mode Network Setup Script with Caddy
 # This configures the Pi to:
 # 1. Connect to existing WiFi/Ethernet (internet side)
 # 2. Broadcast its own WiFi AP (meshtastic side)
@@ -37,8 +37,16 @@ echo "[1/10] Updating system packages..."
 apt-get update
 apt-get upgrade -y
 
-# Install required packages
-echo "[2/10] Installing required packages..."
+# Install Caddy
+echo "[2/10] Installing Caddy web server..."
+apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+apt-get update
+apt-get install -y caddy
+
+# Install other required packages
+echo "[3/10] Installing required packages..."
 apt-get install -y \
     hostapd \
     dnsmasq \
@@ -48,18 +56,17 @@ apt-get install -y \
     python3-pip \
     python3-venv \
     git \
-    nginx \
     avahi-daemon \
     avahi-utils
 
 # Stop services while configuring
-echo "[3/10] Stopping services for configuration..."
+echo "[4/10] Stopping services for configuration..."
 systemctl stop hostapd
 systemctl stop dnsmasq
-systemctl stop nginx
+systemctl stop caddy
 
 # Configure network interfaces
-echo "[4/10] Configuring network interfaces..."
+echo "[5/10] Configuring network interfaces..."
 
 # Backup existing config
 cp /etc/dhcpcd.conf /etc/dhcpcd.conf.backup
@@ -77,7 +84,7 @@ interface wlan0
 EOF
 
 # Configure hostapd (Access Point)
-echo "[5/10] Configuring hostapd (WiFi AP)..."
+echo "[6/10] Configuring hostapd (WiFi AP)..."
 
 cat > /etc/hostapd/hostapd.conf << EOF
 # Interface configuration
@@ -113,7 +120,7 @@ DAEMON_CONF="/etc/hostapd/hostapd.conf"
 EOF
 
 # Configure dnsmasq (DHCP/DNS)
-echo "[6/10] Configuring dnsmasq (DHCP/DNS)..."
+echo "[7/10] Configuring dnsmasq (DHCP/DNS)..."
 
 # Backup original
 mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
@@ -138,21 +145,18 @@ log-dhcp
 EOF
 
 # Configure IP forwarding and NAT
-echo "[7/10] Configuring IP forwarding and NAT..."
+echo "[8/10] Configuring IP forwarding and NAT..."
 
 # Enable IP forwarding
 sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
 sysctl -w net.ipv4.ip_forward=1
 
 # Setup iptables rules for NAT
-# This allows AP clients to access the internet through the Pi's internet connection
-
 # Flush existing rules
 iptables -F
 iptables -t nat -F
 
 # NAT configuration - route traffic from wlan0 (AP) to internet interface
-# This script will work with either eth0 or wlan1 as the internet source
 
 cat > /etc/iptables-setup.sh << 'EOF'
 #!/bin/bash
@@ -191,38 +195,64 @@ EOF
 chmod +x /etc/iptables-setup.sh
 /etc/iptables-setup.sh
 
-# Configure Nginx reverse proxy
-echo "[8/10] Configuring Nginx..."
+# Configure Caddy
+echo "[9/10] Configuring Caddy..."
 
-cat > /etc/nginx/sites-available/meshtastic << EOF
-server {
-    listen 80;
-    server_name meshtastic.local gateway.meshtastic.local 192.168.50.1;
+cat > /etc/caddy/Caddyfile << EOF
+# Meshtastic Gateway Caddyfile
 
-    location / {
-        proxy_pass http://127.0.0.1:$WEB_PORT;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        
-        # SSE specific settings
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 86400s;
-        proxy_send_timeout 86400s;
+# Disable automatic HTTPS (we're on local network)
+{
+    auto_https off
+    admin off
+}
+
+# Main server block - responds on all interfaces
+:80 {
+    # Enable logging
+    log {
+        output file /var/log/caddy/meshtastic.log
+        format json
     }
+
+    # Reverse proxy to Flask app
+    reverse_proxy localhost:$WEB_PORT {
+        # SSE and WebSocket support
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        
+        # Disable buffering for SSE
+        flush_interval -1
+    }
+
+    # Optional: Add compression
+    encode gzip
+
+    # Handle both meshtastic.local and IP addresses
+    @local {
+        host meshtastic.local gateway.meshtastic.local 192.168.50.1 localhost
+    }
+}
+
+# Optional: Respond on all hostnames/IPs
+http:// {
+    reverse_proxy localhost:$WEB_PORT {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        flush_interval -1
+    }
+    encode gzip
 }
 EOF
 
-ln -sf /etc/nginx/sites-available/meshtastic /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
+# Create log directory
+mkdir -p /var/log/caddy
+chown caddy:caddy /var/log/caddy
 
-# Configure Avahi for mDNS (allows meshtastic.local to work)
-echo "[9/10] Configuring mDNS (Avahi)..."
+# Configure Avahi for mDNS
+echo "[10/10] Configuring mDNS (Avahi)..."
 
 cat > /etc/avahi/services/meshtastic.service << EOF
 <?xml version="1.0" standalone='no'?>
@@ -254,11 +284,11 @@ WantedBy=multi-user.target
 EOF
 
 # Create application directory
-echo "[10/10] Creating application directory..."
+echo "Creating application directory..."
 mkdir -p $INSTALL_DIR
 chown -R pi:pi $INSTALL_DIR
 
-# Create systemd service for Meshtastic web app (template - you'll add your code)
+# Create systemd service for Meshtastic web app
 cat > /etc/systemd/system/meshtastic-web.service << EOF
 [Unit]
 Description=Meshtastic Web Interface
@@ -283,10 +313,14 @@ systemctl daemon-reload
 systemctl unmask hostapd
 systemctl enable hostapd
 systemctl enable dnsmasq
-systemctl enable nginx
+systemctl enable caddy
 systemctl enable avahi-daemon
 systemctl enable iptables-setup
 systemctl enable meshtastic-web
+
+# Validate Caddy configuration
+echo "Validating Caddy configuration..."
+caddy validate --config /etc/caddy/Caddyfile
 
 # Create installation instructions
 cat > $INSTALL_DIR/INSTALL.txt << EOF
@@ -325,8 +359,15 @@ The Pi will:
 Configuration Files:
 - Hostapd: /etc/hostapd/hostapd.conf
 - Dnsmasq: /etc/dnsmasq.conf
-- Nginx: /etc/nginx/sites-available/meshtastic
+- Caddy: /etc/caddy/Caddyfile
 - Web Service: /etc/systemd/system/meshtastic-web.service
+
+Caddy Commands:
+- Reload config: sudo systemctl reload caddy
+- Check status: sudo systemctl status caddy
+- View logs: sudo journalctl -u caddy -f
+- Validate config: caddy validate --config /etc/caddy/Caddyfile
+- Format config: caddy fmt --overwrite /etc/caddy/Caddyfile
 EOF
 
 cat $INSTALL_DIR/INSTALL.txt
@@ -335,6 +376,8 @@ echo ""
 echo "=================================="
 echo "Setup Complete!"
 echo "=================================="
+echo ""
+echo "Caddy web server is configured and ready"
 echo ""
 echo "To connect to existing WiFi network (optional):"
 echo "  sudo raspi-config"
