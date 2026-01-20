@@ -1,166 +1,220 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Meshtastic Web Chat</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-      background-color: #121212;
-      color: #ddd;
-    }
-
-    #chat-box {
-      border: 1px solid #333;
-      padding: 10px;
-      height: 300px;
-      overflow-y: scroll;
-      max-width: 500px;
-      margin: 0 auto 20px auto;
-      text-align: left;
-      background-color: #1e1e1e;
-      border-radius: 8px;
-      color: #ddd;
-    }
-
-    #chat-form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 500px;
-      margin: auto;
-    }
-
-    #message-input {
-      padding: 12px;
-      font-size: 16px;
-      border: 1px solid #444;
-      border-radius: 6px;
-      background-color: #121212;
-      color: #ddd;
-      box-sizing: border-box;
-    }
-
-    #chat-form input[type="submit"] {
-      padding: 12px;
-      font-size: 16px;
-      border: none;
-      background-color: #66ea95;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    #chat-form input[type="submit"]:hover {
-      background-color: #66ea95;
-    }
-
-    
-    @media (max-width: 480px) {
-      #message-input,
-      #chat-form input[type="submit"] {
-        width: 100%;
-      }
-    }
-
-    footer {
-      margin-top: 40px;
-      padding: 12px 20px;
-      font-size: 0.9rem;
-      color: #888;
-      text-align: center;
-      border-top: 1px solid #333;
-      background-color: #121212;
-      user-select: none;
-    }
-    footer a {
-      color: #66ea95;
-      text-decoration: none;
-    }
-    footer a:hover {
-      text-decoration: underline;
-    }
-  </style>
+    <title>Meshtastic Public Access Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h2 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        #messages {
+            border: 1px solid #444;
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 8px;
+            background-color: #333;
+            border-radius: 4px;
+            border-left: 3px solid #4CAF50;
+        }
+        #messageForm {
+            display: flex;
+            gap: 10px;
+        }
+        #messageInput {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            border-radius: 4px;
+        }
+        #messageInput:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .connected {
+            background-color: #1b4d1b;
+            color: #90ee90;
+            border: 1px solid #4CAF50;
+        }
+        .disconnected {
+            background-color: #4d1b1b;
+            color: #ff9999;
+            border: 1px solid #ff6b6b;
+        }
+        #deviceInfo {
+            padding: 8px;
+            margin-bottom: 10px;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .device-list {
+            margin-top: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .active-device {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        /* Scrollbar styling for dark mode */
+        #messages::-webkit-scrollbar {
+            width: 10px;
+        }
+        #messages::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 5px;
+        }
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
 </head>
 <body>
+    <h2>Meshtastic Public Access Chat - {{ username }}</h2>
+    <div id="status" class="disconnected">Checking connection...</div>
+    <div id="deviceInfo">
+        <div>Available Devices: <span id="deviceCount">-</span></div>
+        <div>Active Device: <span id="activeDevice">-</span></div>
+        <div class="device-list" id="deviceList"></div>
+    </div>
+    <div id="messages"></div>
+    <form id="messageForm" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="text" id="messageInput" name="message" placeholder="Type your message..." required maxlength="200" autocomplete="off">
+        <button type="submit">Send</button>
+    </form>
 
-  <h1>Meshtastic Chat</h1>
-  <p class="username">Logged in as: <strong id="username">{{ username }}</strong></p>
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const statusDiv = document.getElementById('status');
+        const deviceCountSpan = document.getElementById('deviceCount');
+        const activeDeviceSpan = document.getElementById('activeDevice');
+        const deviceListDiv = document.getElementById('deviceList');
+        let eventSource;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
 
-  <div id="chat-box"></div>
+        function connectSSE() {
+            eventSource = new EventSource('/stream');
+            
+            eventSource.onmessage = function(event) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                messageDiv.textContent = event.data;
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                reconnectAttempts = 0;
+            };
 
-  <form id="chat-form">
-    <input
-      type="text"
-      id="message-input"
-      name="message"
-      placeholder="Type your message here"
-      autocomplete="off"
-      required
-    />
-    <input type="submit" value="Send" />
-  </form>
+            eventSource.onerror = function(event) {
+                console.error('SSE error:', event);
+                eventSource.close();
+                
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    console.log(`Reconnecting... Attempt ${reconnectAttempts}`);
+                    setTimeout(connectSSE, 2000 * reconnectAttempts);
+                } else {
+                    statusDiv.textContent = 'Connection lost. Please refresh the page.';
+                    statusDiv.className = 'disconnected';
+                }
+            };
 
-  <script>
-    const chatBox = document.getElementById('chat-box');
-    const chatForm = document.getElementById('chat-form');
-    const messageInput = document.getElementById('message-input');
-    const username = "{{ username }}";
+            eventSource.onopen = function() {
+                console.log('SSE connected');
+                reconnectAttempts = 0;
+            };
+        }
 
-    let lastSentMessage = null;
+        function checkDeviceStatus() {
+            fetch('/device/status')
+                .then(response => response.json())
+                .then(data => {
+                    const deviceCount = data.available_devices ? data.available_devices.length : 0;
+                    deviceCountSpan.textContent = deviceCount;
+                    
+                    if (data.connected) {
+                        statusDiv.textContent = `Connected - ${data.nodes} nodes - ${data.failed_queue} queued messages`;
+                        statusDiv.className = 'connected';
+                        activeDeviceSpan.textContent = data.device || 'Unknown';
+                        activeDeviceSpan.className = 'active-device';
+                    } else {
+                        statusDiv.textContent = `Device disconnected - ${data.failed_queue} queued messages - Searching...`;
+                        statusDiv.className = 'disconnected';
+                        activeDeviceSpan.textContent = 'None';
+                        activeDeviceSpan.className = '';
+                    }
+                    
+                    // Display all available devices
+                    if (data.available_devices && data.available_devices.length > 0) {
+                        deviceListDiv.innerHTML = 'Devices: ' + 
+                            data.available_devices.map(dev => {
+                                if (dev === data.device) {
+                                    return `<span class="active-device">${dev} (active)</span>`;
+                                }
+                                return dev;
+                            }).join(', ');
+                    } else {
+                        deviceListDiv.innerHTML = 'No devices found';
+                    }
+                })
+                .catch(err => {
+                    console.error('Status check failed:', err);
+                    statusDiv.textContent = 'Status check failed';
+                    statusDiv.className = 'disconnected';
+                });
+        }
 
-    function appendMessage(msg) {
-      const div = document.createElement('div');
-      div.textContent = msg;
-      div.style.color = msg.startsWith('System:') ? '#888' : '#66ea95';
-      div.style.marginBottom = '8px';
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    chatForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = messageInput.value.trim();
-      if (!msg) return;
-
-      lastSentMessage = `${username}: ${msg}`;
-      appendMessage(lastSentMessage);
-      messageInput.value = '';
-
-      try {
-        await fetch("/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({ message: msg }),
-        });
-      } catch (err) {
-        console.error("Failed to send message", err);
-      }
-    });
-
-    const eventSource = new EventSource('/stream');
-    eventSource.onmessage = function (event) {
-      const msg = event.data;
-      if (msg === lastSentMessage) {
-        lastSentMessage = null;
-        return;
-      }
-      appendMessage(msg);
-    };
-  </script>
-
-  <footer>
-    <p>
-      Created by <strong>Snofall</strong>.  
-      Powered by <a href="https://meshtastic.org" target="_blank" rel="noopener">Meshtastic</a>.
-    </p>
-  </footer>
-
+        // Start SSE connection
+        connectSSE();
+        
+        // Check device status every 5 seconds
+        setInterval(checkDeviceStatus, 5000);
+        checkDeviceStatus();
+        
+        // Auto-scroll to bottom on load
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    </script>
 </body>
 </html>
