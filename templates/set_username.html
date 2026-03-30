@@ -1,67 +1,341 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Set Username</title>
+    <title>Set Username | Meshtastic Web Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-base:        #13141f;
+            --bg-panel:       #1a1c2a;
+            --bg-surface:     #2b2d3d;
+            --bg-input:       #161828;
+            --border-dim:     #2b2d3d;
+            --border-mid:     #363854;
+            --border-active:  #3d7a5c;
+            --text-primary:   #7ac4a0;
+            --text-secondary: #4e7a64;
+            --text-dim:       #324a3c;
+            --text-bright:    #a8f0c0;
+            --accent:         #68ea95;
+            --accent-bright:  #88f0aa;
+            --accent-dim:     #2e6648;
+            --amber:          #c8973a;
+            --danger:         #a03030;
+            --danger-text:    #e05050;
+            --glow-green:     0 0 8px rgba(104, 234, 149, 0.3);
+            --scanline-opacity: 0.022;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 400px;
-            margin: 50px auto;
+            font-family: 'Barlow', sans-serif;
+            font-weight: 300;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            position: relative;
+            overflow: hidden;
         }
+
+        /* Scanline overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0, var(--scanline-opacity)) 2px,
+                rgba(0,0,0, var(--scanline-opacity)) 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Vignette */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(
+                ellipse 80% 70% at 50% 50%,
+                transparent 50%,
+                rgba(0,0,0,0.5) 100%
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ─── Card ─── */
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-mid);
+            border-top: 2px solid var(--border-active);
+            border-radius: 2px;
+            padding: 32px 28px 28px;
+            position: relative;
+            z-index: 2;
+            animation: card-in 0.4s ease-out both;
+        }
+
+        @keyframes card-in {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card::before,
+        .login-card::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-color: var(--accent-dim);
+            border-style: solid;
+        }
+        .login-card::before {
+            bottom: -1px; left: -1px;
+            border-width: 0 0 1px 1px;
+        }
+        .login-card::after {
+            bottom: -1px; right: -1px;
+            border-width: 0 1px 1px 0;
+        }
+
+        /* ─── Card Header ─── */
+        .card-header {
+            margin-bottom: 26px;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 16px;
+        }
+
+        .card-header .sys-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--amber);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-header .sys-label::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: var(--amber);
+            border-radius: 50%;
+            animation: blink-dot 1.4s ease-in-out infinite;
+        }
+
+        @keyframes blink-dot {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.25; }
+        }
+
+        h1 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 1.45rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--accent-bright);
+            line-height: 1.1;
+        }
+
         h2 {
-            color: #4CAF50;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 400;
+            font-size: 0.85rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-top: 4px;
         }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            box-sizing: border-box;
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            color: #e0e0e0;
-            border-radius: 4px;
-        }
-        input:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
+
+        /* ─── Error ─── */
         .error {
-            color: #ff6b6b;
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #2a1a1a;
-            border: 1px solid #ff6b6b;
-            border-radius: 4px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.07em;
+            color: var(--danger-text);
+            margin-bottom: 18px;
+            padding: 8px 10px;
+            background-color: rgba(160, 48, 48, 0.1);
+            border: 1px solid var(--danger);
+            border-left: 3px solid var(--danger-text);
+            border-radius: 1px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .error::before {
+            content: '!';
+            background-color: var(--danger);
+            color: #fff;
+            font-weight: bold;
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.65rem;
+            flex-shrink: 0;
+        }
+
+        /* ─── Form ─── */
+        form { display: flex; flex-direction: column; gap: 12px; }
+
+        .field-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 5px;
+        }
+
+        .field-group { display: flex; flex-direction: column; }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper::before {
+            content: '//';
+            position: absolute;
+            left: 10px;
+            color: var(--accent-dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            pointer-events: none;
+            letter-spacing: -0.05em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 11px 11px 11px 32px;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-mid);
+            border-radius: 2px;
+            color: var(--text-bright);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.06em;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        input[type="text"]::placeholder { color: var(--text-dim); }
+
+        input[type="text"]:focus {
+            border-color: var(--border-active);
+            box-shadow: var(--glow-green), inset 0 0 0 1px rgba(61, 122, 92, 0.1);
+        }
+
+        button[type="submit"] {
+            margin-top: 6px;
+            padding: 12px;
+            background-color: transparent;
+            color: var(--accent);
+            border: 1px solid var(--border-active);
+            cursor: pointer;
+            border-radius: 2px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button[type="submit"]::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(104, 234, 149, 0.06) 50%,
+                transparent 100%
+            );
+            transform: translateX(-100%);
+            transition: transform 0.4s ease;
+        }
+
+        button[type="submit"]:hover {
+            background-color: var(--accent-dim);
+            color: var(--text-bright);
+            box-shadow: var(--glow-green);
+        }
+
+        button[type="submit"]:hover::after { transform: translateX(100%); }
+
+        button[type="submit"]:active {
+            background-color: var(--accent);
+            color: var(--bg-base);
+        }
+
+        /* ─── Card Footer ─── */
+        .card-footer {
+            margin-top: 20px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.63rem;
+            color: var(--text-dim);
+            letter-spacing: 0.07em;
+            text-align: center;
+            line-height: 1.8;
         }
     </style>
 </head>
 <body>
-    <h1>Meshtastic Public Access Chat</h1>
-    <h2>Set Your Username</h2>
-    {% if error %}
-    <div class="error">{{ error }}</div>
-    {% endif %}
-    <form method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <input type="text" name="username" placeholder="Enter username (2-20 chars)" required minlength="2" maxlength="20" autocomplete="off">
-        <button type="submit">Join Chat</button>
-    </form>
+    <div class="login-card">
+        <div class="card-header">
+            <div class="sys-label">Identification Required</div>
+            <h1>Meshtastic Web Chat</h1>
+            <h2>Set Your Username</h2>
+        </div>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="field-group">
+                <div class="field-label">Username</div>
+                <div class="input-wrapper">
+                    <input type="text" name="username"
+                           placeholder="2–20 characters"
+                           required minlength="2" maxlength="20"
+                           autocomplete="off">
+                </div>
+            </div>
+            <button type="submit">Join Network</button>
+        </form>
+
+        <div class="card-footer">
+            <div>Powered by Meshtastic® · LoRa</div>
+            <div>Not affiliated with Meshtastic LLC</div>
+        </div>
+    </div>
 </body>
 </html>

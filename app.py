@@ -57,18 +57,22 @@ logger = logging.getLogger(__name__)
 
 def get_available_devices():
     """Scan for available Meshtastic serial devices"""
+    if os.name == 'nt':  # Windows
+        import serial.tools.list_ports
+        return sorted([port.device for port in serial.tools.list_ports.comports()])
+    
+    # Linux / Mac
     devices = []
     patterns = [
         '/dev/ttyUSB*',
         '/dev/ttyACM*',
         '/dev/cu.usbserial*',
         '/dev/cu.usbmodem*',
-        'COM*'
+        '/dev/cu.SLAB_USBtoUART*',
+        '/dev/cu.wchusbserial*',
     ]
-    
     for pattern in patterns:
         devices.extend(glob.glob(pattern))
-    
     return sorted(devices)
 
 def init_interface(device_path=None):

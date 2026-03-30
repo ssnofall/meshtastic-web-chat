@@ -1,12 +1,5 @@
 # Meshtastic Web Chat
 
-**UPDATES**
-- added multiple meshtastic devices for failover. 
-- more robust error handling. 
-- moderate security improvements. 
-- script to help bootstrap a raspberry pi to serve the app 
-
-
 **Meshtastic Web Chat** is a lightweight, self-hosted web-based chat system that bridges local network users to the Meshtastic mesh network. It allows anyone connected to your local network to participate in mesh chats through a web browser even if they don't have a Meshtastic device.
 
 By connecting a Meshtastic node via USB to your offline/local server, you can instantly provide seamless browser-based access to the mesh.
@@ -23,7 +16,7 @@ By connecting a Meshtastic node via USB to your offline/local server, you can in
 
 ## Requirements
 
-* Python 3.x
+* Python 3.14
 * Flask
 * Meshtastic Python API (`meshtastic`)
 * A Meshtastic node connected via USB
@@ -32,7 +25,7 @@ By connecting a Meshtastic node via USB to your offline/local server, you can in
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/snofall/meshtastic-web-chat.git
+   git clone https://github.com/ssnofall/meshtastic-web-chat.git
    cd meshtastic-web-chat
    ```
 
@@ -65,11 +58,14 @@ By connecting a Meshtastic node via USB to your offline/local server, you can in
 
 ## License & Attribution
 
-GNU General Public License v3.0
+* GNU General Public License v3.0
 
-Created by **snofall.**
+> **Disclaimer:** This project is not affiliated with or endorsed by Meshtastic LLC.
 
-**Disclaimer:** This is an unofficial project and is not affiliated with or endorsed by the Meshtastic team.
+## Authors
+
+* [Snofall](https://github.com/ssnofall)
+* [ShyftXero](https://github.com/ShyftXero)
 
 ## Acknowledgments
 

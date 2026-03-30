@@ -1,127 +1,367 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Meshtastic Public Access Chat</title>
+    <title>Meshtastic Web Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-base:        #13141f;
+            --bg-panel:       #1a1c2a;
+            --bg-surface:     #2b2d3d;
+            --bg-input:       #161828;
+            --border-dim:     #2b2d3d;
+            --border-mid:     #363854;
+            --border-active:  #3d7a5c;
+            --text-primary:   #7ac4a0;
+            --text-secondary: #4e7a64;
+            --text-dim:       #324a3c;
+            --text-bright:    #a8f0c0;
+            --accent:         #68ea95;
+            --accent-bright:  #88f0aa;
+            --accent-dim:     #2e6648;
+            --amber:          #c8973a;
+            --danger:         #a03030;
+            --danger-text:    #e05050;
+            --glow-green:     0 0 8px rgba(104, 234, 149, 0.3);
+            --scanline-opacity: 0.022;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Barlow', sans-serif;
+            font-weight: 300;
+            max-width: 860px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
+            padding: 24px 20px 40px;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            position: relative;
         }
-        h2 {
-            color: #4CAF50;
-            margin-bottom: 10px;
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0, var(--scanline-opacity)) 2px,
+                rgba(0,0,0, var(--scanline-opacity)) 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
         }
-        #messages {
-            border: 1px solid #444;
-            height: 400px;
-            overflow-y: scroll;
-            padding: 10px;
-            margin-bottom: 10px;
-            background-color: #2a2a2a;
-            border-radius: 4px;
-        }
-        .message {
-            margin: 5px 0;
-            padding: 8px;
-            background-color: #333;
-            border-radius: 4px;
-            border-left: 3px solid #4CAF50;
-        }
-        #messageForm {
+
+        /* ─── Header ─── */
+        .header-bar {
             display: flex;
+            align-items: baseline;
+            border-bottom: 1px solid var(--border-mid);
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+
+        .header-bar h2 {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--accent-bright);
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
-        #messageInput {
-            flex-grow: 1;
-            padding: 10px;
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            color: #e0e0e0;
-            border-radius: 4px;
+
+        .header-bar h2::before {
+            content: '//';
+            color: var(--accent-dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            letter-spacing: 0;
         }
-        #messageInput:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
+
+        /* ─── Status ─── */
         #status {
-            padding: 10px;
+            padding: 7px 12px;
             margin-bottom: 10px;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: 2px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 3px solid;
+            transition: background-color 0.3s, border-color 0.3s;
         }
+
+        #status::before {
+            content: '';
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
         .connected {
-            background-color: #1b4d1b;
-            color: #90ee90;
-            border: 1px solid #4CAF50;
+            background-color: rgba(43, 45, 61, 0.6);
+            color: var(--accent-bright);
+            border-color: var(--accent);
         }
+        .connected::before {
+            background-color: var(--accent);
+            box-shadow: var(--glow-green);
+            animation: pulse-dot 2.4s ease-in-out infinite;
+        }
+
         .disconnected {
-            background-color: #4d1b1b;
-            color: #ff9999;
-            border: 1px solid #ff6b6b;
+            background-color: rgba(160, 48, 48, 0.12);
+            color: var(--danger-text);
+            border-color: var(--danger);
         }
+        .disconnected::before {
+            background-color: var(--danger-text);
+            animation: blink-dot 1s step-end infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: var(--glow-green); }
+            50%       { opacity: 0.4; box-shadow: none; }
+        }
+        @keyframes blink-dot {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0; }
+        }
+
+        /* ─── Device Info ─── */
         #deviceInfo {
-            padding: 8px;
-            margin-bottom: 10px;
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #aaa;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-dim);
+            border-top: 1px solid var(--border-mid);
+            border-radius: 2px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 20px;
         }
-        .device-list {
-            margin-top: 5px;
-            font-family: monospace;
-            font-size: 12px;
+
+        #deviceInfo > div { display: flex; gap: 6px; }
+
+        #deviceInfo .label {
+            color: var(--text-dim);
+            text-transform: uppercase;
+            white-space: nowrap;
         }
+
+        #deviceCount, #activeDevice { color: var(--text-primary); }
+
         .active-device {
-            color: #4CAF50;
-            font-weight: bold;
+            color: var(--accent-bright) !important;
+            text-shadow: var(--glow-green);
         }
-        /* Scrollbar styling for dark mode */
-        #messages::-webkit-scrollbar {
-            width: 10px;
+
+        .device-list {
+            grid-column: 1 / -1;
+            color: var(--text-dim);
+            margin-top: 2px;
+            border-top: 1px solid var(--border-dim);
+            padding-top: 5px;
+            font-size: 0.65rem;
         }
-        #messages::-webkit-scrollbar-track {
-            background: #1a1a1a;
+
+        /* ─── Messages ─── */
+        #messages {
+            border: 1px solid var(--border-dim);
+            border-top: 2px solid var(--border-active);
+            height: 400px;
+            overflow-y: scroll;
+            padding: 12px;
+            margin-bottom: 12px;
+            background-color: var(--bg-panel);
+            background-image: linear-gradient(
+                to bottom,
+                rgba(104, 234, 149, 0.015) 0%,
+                transparent 10%
+            );
+            border-radius: 2px;
         }
-        #messages::-webkit-scrollbar-thumb {
-            background: #444;
-            border-radius: 5px;
+
+        .message {
+            margin: 0 0 6px 0;
+            padding: 7px 10px;
+            background-color: var(--bg-surface);
+            border-radius: 1px;
+            border-left: 2px solid var(--border-active);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.55;
+            color: var(--text-primary);
+            letter-spacing: 0.03em;
+            transition: border-color 0.2s, background-color 0.2s;
         }
-        #messages::-webkit-scrollbar-thumb:hover {
-            background: #555;
+
+        .message:hover {
+            border-left-color: var(--accent);
+            background-color: rgba(104, 234, 149, 0.04);
         }
+
+        .message.new {
+            animation: msg-in 0.25s ease-out both;
+        }
+        @keyframes msg-in {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ─── Input Form ─── */
+        #messageForm {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .input-wrapper {
+            flex-grow: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper::before {
+            content: '>';
+            position: absolute;
+            left: 10px;
+            color: var(--accent-dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #messageInput {
+            width: 100%;
+            padding: 10px 10px 10px 26px;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-mid);
+            border-radius: 2px;
+            color: var(--text-bright);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.04em;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        #messageInput::placeholder { color: var(--text-dim); }
+
+        #messageInput:focus {
+            border-color: var(--border-active);
+            box-shadow: var(--glow-green), inset 0 0 0 1px rgba(61, 122, 92, 0.15);
+        }
+
+        button[type="submit"] {
+            padding: 10px 22px;
+            background-color: transparent;
+            color: var(--accent);
+            border: 1px solid var(--border-active);
+            cursor: pointer;
+            border-radius: 2px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+
+        button[type="submit"]:hover {
+            background-color: var(--accent-dim);
+            color: var(--text-bright);
+            box-shadow: var(--glow-green);
+        }
+
+        button[type="submit"]:active {
+            background-color: var(--accent);
+            color: var(--bg-base);
+        }
+
+        /* ─── Scrollbar ─── */
+        #messages::-webkit-scrollbar { width: 6px; }
+        #messages::-webkit-scrollbar-track { background: var(--bg-base); }
+        #messages::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 1px; }
+        #messages::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+        /* ─── Footer ─── */
+        footer {
+            margin-top: 32px;
+            padding: 16px 0 4px;
+            font-size: 0.65rem;
+            border-top: 1px solid var(--border-dim);
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 0.05em;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px 20px;
+            align-items: start;
+        }
+
+        footer a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            grid-row: 1;
+        }
+        footer a:hover { color: var(--accent); }
+        footer a img { height: 36px; opacity: 0.85; }
+
+        footer .footer-legal {
+            grid-column: 2;
+            color: var(--text-dim);
+            line-height: 1.7;
+        }
+        footer .footer-legal p + p { margin-top: 2px; }
     </style>
 </head>
 <body>
-    <h2>Meshtastic Public Access Chat - {{ username }}</h2>
-    <div id="status" class="disconnected">Checking connection...</div>
-    <div id="deviceInfo">
-        <div>Available Devices: <span id="deviceCount">-</span></div>
-        <div>Active Device: <span id="activeDevice">-</span></div>
-        <div class="device-list" id="deviceList"></div>
+    <div class="header-bar">
+        <h2>Meshtastic Web Chat &mdash; {{ username }}</h2>
     </div>
+
+    <div id="status" class="disconnected">Checking connection...</div>
+
+    <div id="deviceInfo">
+        <div><span class="label">Devices:</span> <span id="deviceCount">—</span></div>
+        <div><span class="label">Active:</span> <span id="activeDevice">—</span></div>
+        <div class="device-list" id="deviceList">Scanning for devices...</div>
+    </div>
+
     <div id="messages"></div>
+
     <form id="messageForm" method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <input type="text" id="messageInput" name="message" placeholder="Type your message..." required maxlength="200" autocomplete="off">
+        <div class="input-wrapper">
+            <input type="text" id="messageInput" name="message"
+                   placeholder="Compose transmission..." required
+                   maxlength="200" autocomplete="off">
+        </div>
         <button type="submit">Send</button>
     </form>
 
@@ -137,10 +377,10 @@
 
         function connectSSE() {
             eventSource = new EventSource('/stream');
-            
+
             eventSource.onmessage = function(event) {
                 const messageDiv = document.createElement('div');
-                messageDiv.className = 'message';
+                messageDiv.className = 'message new';
                 messageDiv.textContent = event.data;
                 messagesDiv.appendChild(messageDiv);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -150,19 +390,16 @@
             eventSource.onerror = function(event) {
                 console.error('SSE error:', event);
                 eventSource.close();
-                
                 if (reconnectAttempts < maxReconnectAttempts) {
                     reconnectAttempts++;
-                    console.log(`Reconnecting... Attempt ${reconnectAttempts}`);
                     setTimeout(connectSSE, 2000 * reconnectAttempts);
                 } else {
-                    statusDiv.textContent = 'Connection lost. Please refresh the page.';
+                    statusDiv.textContent = 'LINK LOST — REFRESH TO RECONNECT';
                     statusDiv.className = 'disconnected';
                 }
             };
 
             eventSource.onopen = function() {
-                console.log('SSE connected');
                 reconnectAttempts = 0;
             };
         }
@@ -173,48 +410,54 @@
                 .then(data => {
                     const deviceCount = data.available_devices ? data.available_devices.length : 0;
                     deviceCountSpan.textContent = deviceCount;
-                    
+
                     if (data.connected) {
-                        statusDiv.textContent = `Connected - ${data.nodes} nodes - ${data.failed_queue} queued messages`;
+                        statusDiv.textContent =
+                            `LINK ACTIVE — ${data.nodes} NODES — ${data.failed_queue} MSG QUEUED`;
                         statusDiv.className = 'connected';
-                        activeDeviceSpan.textContent = data.device || 'Unknown';
+                        activeDeviceSpan.textContent = data.device || 'UNKNOWN';
                         activeDeviceSpan.className = 'active-device';
                     } else {
-                        statusDiv.textContent = `Device disconnected - ${data.failed_queue} queued messages - Searching...`;
+                        statusDiv.textContent =
+                            `NO LINK — ${data.failed_queue} MSG QUEUED — SEARCHING...`;
                         statusDiv.className = 'disconnected';
-                        activeDeviceSpan.textContent = 'None';
+                        activeDeviceSpan.textContent = 'NONE';
                         activeDeviceSpan.className = '';
                     }
-                    
-                    // Display all available devices
+
                     if (data.available_devices && data.available_devices.length > 0) {
-                        deviceListDiv.innerHTML = 'Devices: ' + 
+                        deviceListDiv.innerHTML = 'FOUND: ' +
                             data.available_devices.map(dev => {
                                 if (dev === data.device) {
-                                    return `<span class="active-device">${dev} (active)</span>`;
+                                    return `<span class="active-device">[${dev}]</span>`;
                                 }
                                 return dev;
-                            }).join(', ');
+                            }).join(' / ');
                     } else {
-                        deviceListDiv.innerHTML = 'No devices found';
+                        deviceListDiv.innerHTML = 'NO DEVICES FOUND';
                     }
                 })
-                .catch(err => {
-                    console.error('Status check failed:', err);
-                    statusDiv.textContent = 'Status check failed';
+                .catch(() => {
+                    statusDiv.textContent = 'STATUS CHECK FAILED';
                     statusDiv.className = 'disconnected';
                 });
         }
 
-        // Start SSE connection
         connectSSE();
-        
-        // Check device status every 5 seconds
         setInterval(checkDeviceStatus, 5000);
         checkDeviceStatus();
-        
-        // Auto-scroll to bottom on load
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     </script>
+
+    <footer>
+        <a href="https://meshtastic.org/" target="_blank" rel="noopener noreferrer">
+            <img src="/static/images/meshtastic-powered.png" alt="Meshtastic-Powered"/>
+            Powered by Meshtastic®
+        </a>
+        <div class="footer-legal">
+            <p>Meshtastic® is a registered trademark of Meshtastic LLC. Software components released under various licenses — see GitHub for details. No warranty provided, use at own risk.</p>
+            <p>This project is not affiliated with or endorsed by Meshtastic LLC.</p>
+        </div>
+    </footer>
 </body>
 </html>
